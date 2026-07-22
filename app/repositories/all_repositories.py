@@ -124,7 +124,8 @@ class TimetableRepository(BaseRepository[Timetable]):
 
 class PassengerReportRepository(BaseRepository[PassengerReport]):
     async def get_active_reports(self, db: AsyncSession, minutes: int = 30) -> List[PassengerReport]:
-        time_threshold = datetime.now(timezone.utc) - func.cast(f"{minutes} minutes", func.INTERVAL)
+        from datetime import timedelta
+        time_threshold = datetime.now(timezone.utc) - timedelta(minutes=minutes)
         query = select(self.model).filter(self.model.created_at >= time_threshold)
         result = await db.execute(query)
         return result.scalars().all()
