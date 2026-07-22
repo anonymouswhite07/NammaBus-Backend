@@ -3,6 +3,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from pydantic import ValidationError
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.settings import settings
 from app.database.session import get_db
@@ -36,7 +38,9 @@ async def get_current_user(
             detail="Could not validate credentials",
         )
         
-    user = await user_repo.get(db, id=token_data.sub)
+    query = select(User).filter(User.id == token_data.sub, User.deleted_at == None).options(selectinload(User.role))
+    res = await db.execute(query)
+    user = res.scalars().first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
