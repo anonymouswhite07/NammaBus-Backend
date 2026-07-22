@@ -289,3 +289,25 @@ class MLPredictionResponse(BaseModel):
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+class ExtractedTimetableRow(BaseModel):
+    sector: str
+    page: int
+    serial_no: int
+    arrival_time: str
+    departure_time: str
+    route_code: str
+    operator: str
+    destination: str
+    remarks: Optional[str] = None
+    low_confidence: bool
+
+class ExtractedImportResult(BaseModel):
+    total_records_processed: int
+    unique_records_count: int
+    duplicates_skipped: int
+    saved_to_db_count: int
+    merged_json_url: str
+    merged_xlsx_url: str
+    merged_csv_url: str
+

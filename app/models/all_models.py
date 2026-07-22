@@ -241,3 +241,20 @@ class AuditLog(Base, BaseModelMixin):
     
     # Relationships
     user: Mapped["User"] = relationship(back_populates="audit_logs")
+
+class ExtractedTimetable(Base, BaseModelMixin):
+    __tablename__ = "extracted_timetables"
+
+    sector: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    page_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    serial_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    arrival_time: Mapped[str] = mapped_column(String(50), nullable=False)
+    departure_time: Mapped[str] = mapped_column(String(50), nullable=False)
+    arrival_time_normalized: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    departure_time_normalized: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    route_code: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
+    operator: Mapped[str] = mapped_column(String(255), nullable=False)
+    destination: Mapped[str] = mapped_column(String(255), nullable=False)
+    remarks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    low_confidence: Mapped[bool] = mapped_column(Boolean, default=False)
+

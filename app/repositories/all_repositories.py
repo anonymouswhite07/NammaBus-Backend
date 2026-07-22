@@ -7,7 +7,8 @@ from app.repositories.base_repository import BaseRepository
 from app.models.all_models import (
     Role, User, RefreshToken, BusOperator, Bus, Route, Stop, RouteStop,
     Timetable, PassengerReport, ChatRoom, ChatMessage, Advertisement,
-    Notification, NotificationHistory, MLPrediction, AnalyticsLog, AuditLog
+    Notification, NotificationHistory, MLPrediction, AnalyticsLog, AuditLog,
+    ExtractedTimetable
 )
 
 class RoleRepository(BaseRepository[Role]):
@@ -176,6 +177,9 @@ class AnalyticsLogRepository(BaseRepository[AnalyticsLog]):
 class AuditLogRepository(BaseRepository[AuditLog]):
     pass
 
+class ExtractedTimetableRepository(BaseRepository[ExtractedTimetable]):
+    pass
+
 # Singleton repository instances
 role_repo = RoleRepository(Role)
 user_repo = UserRepository(User)
@@ -195,3 +199,4 @@ notification_history_repo = NotificationHistoryRepository(NotificationHistory)
 ml_prediction_repo = MLPredictionRepository(MLPrediction)
 analytics_log_repo = AnalyticsLogRepository(AnalyticsLog)
 audit_log_repo = AuditLogRepository(AuditLog)
+extracted_timetable_repo = ExtractedTimetableRepository(ExtractedTimetable)

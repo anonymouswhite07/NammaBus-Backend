@@ -18,7 +18,8 @@ from app.models.all_models import (
     MLPrediction,
     AnalyticsLog,
     AuditLog,
-    favourite_routes
+    favourite_routes,
+    ExtractedTimetable
 )
 
 __all__ = [
@@ -41,5 +42,6 @@ __all__ = [
     "MLPrediction",
     "AnalyticsLog",
     "AuditLog",
-    "favourite_routes"
+    "favourite_routes",
+    "ExtractedTimetable"
 ]
