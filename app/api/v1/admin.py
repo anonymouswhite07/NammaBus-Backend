@@ -16,7 +16,8 @@ super_admin_checker = RoleChecker(["Super Admin"])
 
 @router.get("/dashboard", response_model=StandardResponse[dict])
 async def get_admin_dashboard_summary(
-    db: AsyncSession = Depends(super_admin_checker)
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(super_admin_checker)
 ):
     """Retrieves high-level dashboard summaries of Namma Bus. Requires Super Admin role."""
     # Count totals
@@ -65,7 +66,8 @@ async def get_admin_dashboard_summary(
 async def list_all_users(
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(super_admin_checker)
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(super_admin_checker)
 ):
     """Lists all user accounts (including transit admins/moderators). Requires Super Admin role."""
     query = (
@@ -86,7 +88,8 @@ async def list_all_users(
 @router.put("/users/{id}/deactivate", response_model=StandardResponse[UserResponse])
 async def toggle_user_activation(
     id: uuid.UUID,
-    db: AsyncSession = Depends(super_admin_checker)
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(super_admin_checker)
 ):
     """Toggles the active status of a user account. Requires Super Admin role."""
     user = await user_repo.get(db, id=id)

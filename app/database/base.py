@@ -25,9 +25,9 @@ class GUID(TypeDecorator):
             return value
         else:
             if isinstance(value, uuid.UUID):
-                return str(value)
+                return value.hex
             else:
-                return value
+                return str(value).replace('-', '')
 
     def process_result_value(self, value, dialect):
         if value is None:
