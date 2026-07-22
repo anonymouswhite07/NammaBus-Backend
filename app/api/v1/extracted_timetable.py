@@ -3,6 +3,7 @@ import os
 import zipfile
 import json
 import uuid
+import re
 import pandas as pd
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
@@ -77,7 +78,9 @@ async def import_extracted_timetable(
         raw_items = []
         if filename.endswith(".json"):
             try:
-                data = json.loads(contents.decode("utf-8"))
+                json_str = contents.decode("utf-8")
+                json_str_repaired = re.sub(r'\\(?!["\\/bfnrt])(?!u[0-9a-fA-F]{4})', r'\\\\', json_str)
+                data = json.loads(json_str_repaired)
                 if isinstance(data, list):
                     raw_items.extend(data)
                 elif isinstance(data, dict):
@@ -94,7 +97,9 @@ async def import_extracted_timetable(
                         if z_name.lower().endswith(".json"):
                             with z.open(z_name) as z_file:
                                 z_contents = z_file.read()
-                                data = json.loads(z_contents.decode("utf-8"))
+                                json_str = z_contents.decode("utf-8")
+                                json_str_repaired = re.sub(r'\\(?!["\\/bfnrt])(?!u[0-9a-fA-F]{4})', r'\\\\', json_str)
+                                data = json.loads(json_str_repaired)
                                 if isinstance(data, list):
                                     raw_items.extend(data)
                                 elif isinstance(data, dict):
