@@ -72,7 +72,7 @@ if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_origin_regex=r"https?://localhost:\d+" if use_regex else None,
+        allow_origin_regex=r"https?://(localhost:\d+|.*\.vercel\.app)" if use_regex else None,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
