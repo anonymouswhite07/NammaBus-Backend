@@ -264,3 +264,173 @@ async def download_merged_file(filename: str):
         filename=filename,
         media_type="application/octet-stream"
     )
+
+@router.post("/publish", response_model=StandardResponse[dict])
+async def publish_extracted_timetable(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(admin_checker)
+):
+    """
+    Processes the raw staging data in extracted_timetables and publishes it
+    into the active routes, stops, route_stops, and timetables tables.
+    """
+    # 1. Retrieve all extracted timetable rows
+    query = select(extracted_timetable_repo.model)
+    result = await db.execute(query)
+    extracted_rows = result.scalars().all()
+    
+    if not extracted_rows:
+        return StandardResponse(
+            success=True,
+            message="No extracted timetable records found to publish.",
+            data={"routes_created": 0, "stops_created": 0, "timetables_created": 0}
+        )
+        
+    # Import repos
+    from app.repositories.all_repositories import route_repo, stop_repo, route_stop_repo, timetable_repo
+    from datetime import datetime
+    from sqlalchemy import and_
+    
+    routes_created = 0
+    stops_created = 0
+    timetables_created = 0
+    
+    # Pre-fetch existing caches to avoid duplicate queries
+    existing_routes = await route_repo.get_multi(db, limit=5000)
+    routes_cache = {r.route_number: r for r in existing_routes}
+    
+    existing_stops = await stop_repo.get_multi(db, limit=5000)
+    stops_cache = {s.name: s for s in existing_stops}
+    
+    for row in extracted_rows:
+        route_num = row.route_code.strip()
+        dest_name = row.destination.strip()
+        
+        # Parse source stop name from sector
+        # E.g. "SALEM TBS TO JUNCTION SECTOR" -> "Salem TBS"
+        sector_upper = row.sector.upper()
+        if " TO " in sector_upper:
+            source_name = row.sector.split(" TO ")[0].strip()
+        else:
+            source_name = "Salem Town Bus Stand"
+            
+        # Clean up names
+        source_name = source_name.replace("SECTOR", "").strip()
+        
+        # 1. Ensure source stop exists
+        if source_name not in stops_cache:
+            new_stop = await stop_repo.create(
+                db,
+                obj_in={
+                    "name": source_name,
+                    "latitude": 11.6643,
+                    "longitude": 78.1460,
+                    "address": "Salem, Tamil Nadu"
+                }
+            )
+            stops_cache[source_name] = new_stop
+            stops_created += 1
+        source_stop = stops_cache[source_name]
+        
+        # 2. Ensure destination stop exists
+        if dest_name not in stops_cache:
+            new_stop = await stop_repo.create(
+                db,
+                obj_in={
+                    "name": dest_name,
+                    "latitude": 11.6500,
+                    "longitude": 78.1500,
+                    "address": "Salem, Tamil Nadu"
+                }
+            )
+            stops_cache[dest_name] = new_stop
+            stops_created += 1
+        dest_stop = stops_cache[dest_name]
+        
+        # 3. Ensure route exists
+        if route_num not in routes_cache:
+            new_route = await route_repo.create(
+                db,
+                obj_in={
+                    "route_number": route_num,
+                    "source": source_name,
+                    "destination": dest_name,
+                    "description": f"Salem to {dest_name} (Operator: {row.operator})",
+                    "fare": 25.0,
+                    "frequency": "20 mins",
+                    "trip_duration": "45 mins"
+                }
+            )
+            routes_cache[route_num] = new_route
+            routes_created += 1
+            
+            # Map route stops
+            await route_stop_repo.create(
+                db,
+                obj_in={
+                    "route_id": new_route.id,
+                    "stop_id": source_stop.id,
+                    "sequence_order": 1
+                }
+            )
+            await route_stop_repo.create(
+                db,
+                obj_in={
+                    "route_id": new_route.id,
+                    "stop_id": dest_stop.id,
+                    "sequence_order": 2
+                }
+            )
+        route_obj = routes_cache[route_num]
+        
+        # 4. Ensure timetable slot exists
+        # Parse arrival/departure time
+        arr_time = None
+        dep_time = None
+        if row.arrival_time_normalized:
+            try:
+                arr_time = datetime.strptime(row.arrival_time_normalized, "%H:%M").time()
+            except:
+                pass
+        if row.departure_time_normalized:
+            try:
+                dep_time = datetime.strptime(row.departure_time_normalized, "%H:%M").time()
+            except:
+                pass
+                
+        if dep_time:
+            # Check if this timetable entry already exists
+            t_query = select(timetable_repo.model).filter(
+                and_(
+                    timetable_repo.model.route_id == route_obj.id,
+                    timetable_repo.model.stop_id == source_stop.id,
+                    timetable_repo.model.departure_time == dep_time
+                )
+            )
+            t_res = await db.execute(t_query)
+            existing_t = t_res.scalars().first()
+            
+            if not existing_t:
+                await timetable_repo.create(
+                    db,
+                    obj_in={
+                        "route_id": route_obj.id,
+                        "stop_id": source_stop.id,
+                        "arrival_time": arr_time or dep_time,
+                        "departure_time": dep_time,
+                        "day_of_week": "ALL"
+                    }
+                )
+                timetables_created += 1
+                
+    await db.commit()
+    
+    return StandardResponse(
+        success=True,
+        message=f"Successfully published staging data.",
+        data={
+            "routes_created": routes_created,
+            "stops_created": stops_created,
+            "timetables_created": timetables_created
+        }
+    )
