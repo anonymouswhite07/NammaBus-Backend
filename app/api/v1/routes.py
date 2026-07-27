@@ -17,13 +17,14 @@ admin_checker = RoleChecker(["Super Admin", "Transport Admin"])
 @router.get("", response_model=StandardResponse[List[RouteResponse]])
 async def list_routes(
     search: Optional[str] = None,
+    local_time: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db)
 ):
     """Lists or searches routes in the system."""
     if search:
-        routes = await route_repo.search_routes(db, query_str=search)
+        routes = await route_repo.search_routes(db, query_str=search, ref_time_str=local_time)
     else:
         routes = await route_repo.get_multi(db, skip=skip, limit=limit)
     return StandardResponse(
